@@ -1,0 +1,347 @@
+{
+  "name": "Automate x post",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 4
+            }
+          ]
+        }
+      },
+      "id": "e120a972-a47c-4c8e-a8c0-de544f371250",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [
+        336,
+        128
+      ],
+      "typeVersion": 1.2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.buffer.com/graphql",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer LTBwxTVDs18Bbv7T-qetfv9jnwUTvpa9CKHuwWS1VuX"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  query: 'mutation CreateIdea($text: String!) { createIdea(input: { organizationId: \"69fb0a91f7c5d5e6e024a430\", content: { title: \"AI Tweet\", text: $text } }) { ... on Idea { id } } }',\n  variables: {\n    text: $json.content.parts[0].text\n  }\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1392,
+        320
+      ],
+      "id": "0bf84060-e46f-4d5a-8389-4e430899f09b",
+      "name": "HTTP Request",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a sharp, technical full-stack engineer and product builder. You build high-performance web applications and love optimization, UI/UX, and clean architecture. Look at this trending industry topic:\n\nTitle: {{ $json.title }}\nContext: {{ $json.context }}\n\nWrite a punchy, highly conversational X (Twitter) post that shares a practical engineering insight, architectural trade-off, or builder's perspective on this topic.\n\nSTRICT INSTRUCTIONS:\n1. Persona: Speak from the trenches of development. Avoid high-level corporate fluff or generic thought-leader summaries. Talk like a developer who just opened their IDE to build or fix something related to this concept. \n2. Style: Write entirely in lowercase. Keep it casual, direct, and pragmatic—as if typed quickly from a phone after debugging.\n3. Length: Keep the entire output under 30 words total to guarantee it stays safely under your strict character limit. Every word must count.\n4. Hashtags: End the post with exactly 2 highly relevant technical hashtags that match the content (e.g., #webdev, #buildinpublic, #nextjs, #coding).\n5. Formatting: Output ONLY the final raw text of the post. No quotation marks, no markdown code blocks, no introductory fluff."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        1120,
+        112
+      ],
+      "id": "879dd1f8-9e5b-44ab-9ce4-918db7d45480",
+      "name": "Message a model",
+      "retryOnFail": true,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "VfCO2kVEdi0FfwvN",
+          "name": "post gen"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ Math.random() > 0.5 ? 'https://dev.to/api/articles?per_page=15' : 'https://hn.algolia.com/api/v1/search?tags=front_page' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer LTBwxTVDs18Bbv7T-qetfv9jnwUTvpa9CKHuwWS1VuX"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  query: 'mutation CreateIdea($text: String!) { createIdea(input: { organizationId: \"69fb0a91f7c5d5e6e024a430\", content: { title: \"AI Tweet\", text: $text } }) { ... on Idea { id } } }',\n  variables: {\n    text: $json.Tweet\n  }\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        496,
+        -96
+      ],
+      "id": "1b1877c7-ecf8-4689-91af-4f236f792f6d",
+      "name": "Fetch Trends",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Grab all incoming items from the API node\nconst items = $input.all();\n\nlet selectedTitle = \"\";\nlet selectedContext = \"\";\n\n// 1. Check if it's Hacker News data (wrapped in a single item with a 'hits' array)\nif (items[0].json.hits && Array.isArray(items[0].json.hits)) {\n  const hits = items[0].json.hits;\n  const randomHit = hits[Math.floor(Math.random() * hits.length)];\n  selectedTitle = randomHit.title;\n  selectedContext = \"Tech startup and engineering trends\";\n} \n// 2. Otherwise, it's Dev.to data (split into multiple separate items)\nelse {\n  const randomItem = items[Math.floor(Math.random() * items.length)];\n  selectedTitle = randomItem.json.title;\n  selectedContext = randomItem.json.description || \"Web development trends\";\n}\n\n// Force n8n to output exactly ONE clean item\nreturn [{\n  json: {\n    title: selectedTitle,\n    context: selectedContext\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        304
+      ],
+      "id": "aff2551a-0005-4755-b8f7-537a936f42d4",
+      "name": "Pick One Trend"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "documentId": {
+          "__rl": true,
+          "value": "1F4g_rozz0nFYj6DhDeAIjRbcxDA83dZNTQ8o3Ugrjvw",
+          "mode": "list",
+          "cachedResultName": "x post",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1F4g_rozz0nFYj6DhDeAIjRbcxDA83dZNTQ8o3Ugrjvw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1F4g_rozz0nFYj6DhDeAIjRbcxDA83dZNTQ8o3Ugrjvw/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        800,
+        0
+      ],
+      "id": "e4641f73-76db-4879-8c23-36548195cbb0",
+      "name": "Read History",
+      "credentials": {
+        "googleApi": {
+          "id": "u3DNo61OVscj3g6k",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Grab the single random trend we picked upstream\nconst trend = $('Pick One Trend').item.json;\n\n// 2. Grab all historical rows returned from your Read History node\nconst historyItems = $input.all();\n\n// 3. Sort by date descending (newest first) and grab only the top 5 rows\n// NOTE: This assumes your Google Sheet columns are named exactly \"Date\" and \"Post Text\"\nconst latestFive = historyItems\n  .map(item => item.json)\n  .filter(row => row.Date) // Drops any empty rows to prevent crashes\n  .sort((a, b) => new Date(b.Date) - new Date(a.Date))\n  .slice(0, 5);\n\n// 4. Extract the post text and format it into a clean markdown bulleted list\nconst pastPostsText = latestFive\n  .map(row => row['Post Text'] || '')\n  .filter(text => text.trim() !== '')\n  .map(text => `- ${text}`)\n  .join('\\n');\n\n// 5. Output exactly ONE clean item to choke n8n's looping engine and feed Gemini\nreturn [{\n  json: {\n    title: trend.title,\n    context: trend.context,\n    history: pastPostsText || \"No previous posts recorded yet.\"\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        992,
+        240
+      ],
+      "id": "edd23f76-08b4-4305-9834-5ca15ad09f3b",
+      "name": "Assemble Context"
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1F4g_rozz0nFYj6DhDeAIjRbcxDA83dZNTQ8o3Ugrjvw",
+          "mode": "list",
+          "cachedResultName": "x post",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1F4g_rozz0nFYj6DhDeAIjRbcxDA83dZNTQ8o3Ugrjvw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1F4g_rozz0nFYj6DhDeAIjRbcxDA83dZNTQ8o3Ugrjvw/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ new Date().toISOString() }}",
+            "Topic": "={{ $('Assemble Context').item.json.title }}",
+            "Post Text": "={{ $('Message a model').item.json.content.parts[0].text }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Topic",
+              "displayName": "Topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Post Text",
+              "displayName": "Post Text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1520,
+        144
+      ],
+      "id": "cdc91cac-61d8-41c5-8375-c339e3b70376",
+      "name": "Append New Post",
+      "credentials": {
+        "googleApi": {
+          "id": "u3DNo61OVscj3g6k",
+          "name": "Google Sheets account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Trends",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Trends": {
+      "main": [
+        [
+          {
+            "node": "Pick One Trend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick One Trend": {
+      "main": [
+        [
+          {
+            "node": "Read History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read History": {
+      "main": [
+        [
+          {
+            "node": "Assemble Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assemble Context": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Append New Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "c9113be6-5d64-44a6-9b8e-6f5006692e78",
+  "meta": {
+    "templateId": "5841",
+    "templateCredsSetupCompleted": true,
+    "instanceId": "5cb3a551aa3c37950eb7546778a7224947ff1e2890fb48b24d88e8a115e1c9d3"
+  },
+  "id": "VC9gDeMtIJMeUZA0",
+  "tags": []
+}
